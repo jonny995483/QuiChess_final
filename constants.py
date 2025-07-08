@@ -1,4 +1,4 @@
-# --- START OF FILE constants.py (최종 수정본) ---
+# --- START OF FILE constants.py (최종 완성본) ---
 
 import pygame
 pygame.init()
@@ -7,14 +7,17 @@ WIDTH = 1000
 HEIGHT = 900
 screen = pygame.display.set_mode([WIDTH, HEIGHT])
 pygame.display.set_caption('QuiChess: The Quiz Chess Game!')
-# 폰트는 시스템에 따라 없을 수 있으므로, 기본 폰트로 변경하거나 맞는 폰트 파일을 준비해야 합니다.
-# 'malgungothic'이 없다면 'freesansbold.ttf' 또는 None을 사용하세요.
+
+# 폰트 로딩: '맑은 고딕'을 시도하고, 없으면 기본 폰트를 사용합니다.
+# 한글이 깨진다면, 'NanumGothic.ttf'와 같은 한글 폰트 파일을 프로젝트 폴더에 넣고
+# font = pygame.font.Font('NanumGothic.ttf', 20) 처럼 직접 지정하는 것이 가장 확실합니다.
 try:
     font = pygame.font.SysFont('malgungothic', 20)
     medium_font = pygame.font.SysFont('malgungothic', 40)
     big_font = pygame.font.SysFont('malgungothic', 50)
-except:
-    print("경고: '맑은 고딕' 폰트를 찾을 수 없습니다. 기본 폰트로 대체합니다.")
+    print("'맑은 고딕' 폰트를 성공적으로 불러왔습니다.")
+except pygame.error:
+    print("경고: '맑은 고딕' 폰트를 찾을 수 없습니다. 기본 폰트로 대체합니다. 한글이 깨질 수 있습니다.")
     font = pygame.font.Font(None, 24)
     medium_font = pygame.font.Font(None, 48)
     big_font = pygame.font.Font(None, 60)
@@ -32,7 +35,6 @@ black_locations = [(0, 7), (1, 7), (2, 7), (3, 7), (4, 7), (5, 7), (6, 7), (7, 7
                    (0, 6), (1, 6), (2, 6), (3, 6), (4, 6), (5, 6), (6, 6), (7, 6)]
 captured_pieces_white = []
 captured_pieces_black = []
-# 0 - whites turn no selection: 1-whites turn piece selected: 2- black turn no selection, 3 - black turn piece selected
 turn_step = 0
 selection = 100
 valid_moves = []
@@ -76,49 +78,23 @@ white_pawn_small = pygame.transform.scale(white_pawn, (45, 45))
 
 white_images = [white_pawn, white_queen, white_king, white_knight, white_rook, white_bishop]
 white_promotions = ['bishop', 'knight', 'rook', 'queen']
-white_moved = [False, False, False, False, False, False, False, False,
-               False, False, False, False, False, False, False, False]
-small_white_images = [white_pawn_small, white_queen_small, white_king_small, white_knight_small,
-                      white_rook_small, white_bishop_small]
+white_moved = [False] * 16
+small_white_images = [white_pawn_small, white_queen_small, white_king_small, white_knight_small, white_rook_small, white_bishop_small]
 black_images = [black_pawn, black_queen, black_king, black_knight, black_rook, black_bishop]
-small_black_images = [black_pawn_small, black_queen_small, black_king_small, black_knight_small,
-                      black_rook_small, black_bishop_small]
+small_black_images = [black_pawn_small, black_queen_small, black_king_small, black_knight_small, black_rook_small, black_bishop_small]
 black_promotions = ['bishop', 'knight', 'rook', 'queen']
-black_moved = [False, False, False, False, False, False, False, False,
-               False, False, False, False, False, False, False, False]
+black_moved = [False] * 16
 piece_list = ['pawn', 'queen', 'king', 'knight', 'rook', 'bishop']
-# check variables/ flashing counter
-counter = 0
-winner = ''
-game_over = False
-white_ep = (100, 100)
-black_ep = (100, 100)
-white_promote = False
-black_promote = False
-promo_index = 100
+counter, winner, game_over = 0, '', False
+white_ep, black_ep = (100, 100), (100, 100)
+white_promote, black_promote, promo_index = False, False, 100
 check = False
 castling_moves = []
 
 # 퀴즈 관련 변수
 QUIZ_CATEGORIES = ['상식', '시사', '경제', '스포츠', '속담', '사자성어', '역사', '과학', '문화/예술']
-quiz_state = 'INACTIVE'  # INACTIVE, CATEGORY_SELECTION, ANSWERING, RESULT
-quiz_info = {
-    'categories': [],
-    'question': '',
-    'answer': '',
-    'answer_clean': '',
-    'user_answer': '',
-    'result': None, # True: 정답, False: 오답
-    'result_time': 0
-}
+quiz_state = 'INACTIVE'
+quiz_info = {'categories': [], 'question': '', 'answer': '', 'answer_clean': '', 'user_answer': '', 'result': None, 'result_time': 0}
 
 # 공격 정보를 저장할 변수
-attack_context = {
-    'attacker_color': None,
-    'attacker_index': None,
-    'defender_index': None,
-    'target_coords': None,
-    'original_attacker_coords': None
-}
-
-# --- END OF FILE constants.py (최종 수정본) ---
+attack_context = {'attacker_color': None, 'attacker_index': None, 'defender_index': None, 'target_coords': None, 'original_attacker_coords': None, 'original_turn_step': 0}
