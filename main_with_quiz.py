@@ -9,11 +9,55 @@ import gemini_quiz
 # Gemini API 설정
 gemini_quiz.setup_gemini()
 
+regame_btn_rect = pygame.Rect(810, 820, 180, 60)
+
+
+# #### 재시작 기능 수정: 메시지 표시 여부 제어 ####
+def reset_game(show_message=True):
+    global white_pieces, white_locations, white_moved, black_pieces, black_locations, black_moved
+    global captured_pieces_white, captured_pieces_black, turn_step, selection, valid_moves
+    global winner, game_over, white_ep, black_ep, white_options, black_options, selected_piece
+    global notification_message
+
+    white_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook'] + ['pawn'] * 8
+    white_locations = [(i, 0) for i in range(8)] + [(i, 1) for i in range(8)]
+    white_moved = [False] * 16
+    black_pieces = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop', 'knight', 'rook'] + ['pawn'] * 8
+    black_locations = [(i, 7) for i in range(8)] + [(i, 6) for i in range(8)]
+    black_moved = [False] * 16
+
+    captured_pieces_white, captured_pieces_black = [], []
+    turn_step, selection, valid_moves = 0, 100, []
+    winner, game_over = '', False
+    white_ep, black_ep = (100, 100), (100, 100)
+    white_options, black_options = [], []
+    selected_piece = None
+
+    black_options = check_options(black_pieces, black_locations, 'black')
+    white_options = check_options(white_pieces, white_locations, 'white')
+
+    if show_message:
+        notification_message['text'] = '게임을 다시 시작합니다.'
+        notification_message['display_time'] = time.time() + 2
+        print("게임이 재시작되었습니다.")
+
 
 def draw_text_center(text, font_obj, color, surface, rect):
     text_surface = font_obj.render(text, True, color)
     text_rect = text_surface.get_rect(center=rect.center)
     surface.blit(text_surface, text_rect)
+
+
+def draw_notification():
+    if notification_message['text'] and time.time() < notification_message['display_time']:
+        text = notification_message['text']
+        rect = pygame.Rect(100, 50, 600, 60)
+        bg_surface = pygame.Surface(rect.size, pygame.SRCALPHA)
+        pygame.draw.rect(bg_surface, (0, 0, 0, 180), bg_surface.get_rect(), border_radius=15)
+        screen.blit(bg_surface, rect.topleft)
+        draw_text_center(text, font, 'white', screen, rect)
+    else:
+        notification_message['text'] = ''
 
 
 def draw_quiz_ui():
@@ -27,7 +71,6 @@ def draw_quiz_ui():
         attacker_img = attacker_images[piece_list.index(attack_context['attacker_piece'])]
         defender_images = black_images if attacker_color == 'white' else white_images
         defender_img = defender_images[piece_list.index(attack_context['defender_piece'])]
-
         attacker_img_large = pygame.transform.scale(attacker_img, (150, 150))
         defender_img_large = pygame.transform.scale(defender_img, (150, 150))
 
@@ -63,7 +106,7 @@ def draw_quiz_ui():
 
         if quiz_info['questions_to_solve'] > 1:
             draw_text_center(f"문제 {quiz_info['current_question_index'] + 1} / {quiz_info['questions_to_solve']}", font,
-                             'white', pygame.Rect(0, 90, 800, 50))
+                             'white', screen, pygame.Rect(0, 90, 800, 50))
 
         q_rect = pygame.Rect(50, 150, 700, 150)
         words, lines, current_line = quiz_info['question'].split(' '), [], ""
@@ -78,10 +121,12 @@ def draw_quiz_ui():
                              pygame.Rect(q_rect.x, q_rect.y + 20 + i * font.get_linesize(), q_rect.width,
                                          font.get_linesize()))
 
+        if quiz_info['skill_message'] and time.time() - quiz_info['start_time'] < 4:
+            draw_text_center(quiz_info['skill_message'], font, 'orange', screen, pygame.Rect(0, 360, 800, 50))
+
         hint_text = ""
         if remaining_time <= quiz_info['limit_time'] * quiz_info['hint_time_ratio']:
             hint_text = "힌트: " + "-" * len(quiz_info['answer_clean'])
-        # #### 퀸/나이트 공격 스킬 시간 변경 ####
         if remaining_time <= 15:
             if attack_context['attacker_piece'] == 'queen':
                 hint_text = f"힌트: {quiz_info['answer'][0]}" + "-" * (len(quiz_info['answer_clean']) - 1)
@@ -113,41 +158,30 @@ def draw_quiz_ui():
 
 def apply_piece_skills():
     global quiz_info
-    attacker_piece = attack_context['attacker_piece']
-    defender_piece = attack_context['defender_piece']
+    attacker_piece, defender_piece = attack_context['attacker_piece'], attack_context['defender_piece']
 
-    # #### 룩 vs 룩 스킬 무효화 ####
     if attacker_piece == 'rook' and defender_piece == 'rook':
-        print("룩과 룩의 대결! 모든 스킬이 무효화됩니다.")
-        quiz_info['limit_time'] = 30
-        quiz_info['hint_time_ratio'] = 0.5
-        quiz_info['reroll_available'] = False
-        quiz_info['questions_to_solve'] = 1
+        quiz_info.update({'limit_time': 30, 'hint_time_ratio': 0.5, 'reroll_available': False, 'questions_to_solve': 1})
         return
 
-    # 기본값 초기화
-    quiz_info['limit_time'] = 30
-    quiz_info['hint_time_ratio'] = 0.5
-    quiz_info['reroll_available'] = False
-    quiz_info['questions_to_solve'] = 1
+    quiz_info.update({'limit_time': 30, 'hint_time_ratio': 0.5, 'reroll_available': False, 'questions_to_solve': 1,
+                      'skill_message': ''})
     if 'knight_hint' in quiz_info: del quiz_info['knight_hint']
 
-    # 공격 스킬 적용
     if attacker_piece == 'rook':
         quiz_info['limit_time'] = 45; quiz_info['hint_time_ratio'] = 30 / 45
     elif attacker_piece == 'bishop':
         quiz_info['reroll_available'] = True
     elif attacker_piece == 'knight':
         answer = quiz_info['answer_clean']
-        if len(answer) > 0:
+        if len(answer) > 0 and all('가' <= char <= '힣' for char in answer):
             rand_idx = random.randint(0, len(answer) - 1)
-            hint_chars = ['-' for _ in answer]
+            hint_chars = ['-' for _ in answer];
             chosung = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
             cho_code = (ord(answer[rand_idx]) - ord('가')) // 588
-            hint_chars[rand_idx] = chosung[cho_code]
+            hint_chars[rand_idx] = chosung[cho_code];
             quiz_info['knight_hint'] = "".join(hint_chars)
 
-    # 방어 스킬 적용
     if defender_piece == 'queen':
         quiz_info['questions_to_solve'] = 2
     elif defender_piece == 'rook':
@@ -193,7 +227,7 @@ def resolve_attack():
     selection, valid_moves = 100, []
 
 
-# 이하 함수들은 거의 변경 없음 (주석 생략)
+# 이하 함수들은 변경 없음
 def draw_board():
     for r in range(8):
         for c in range(8):
@@ -207,7 +241,9 @@ def draw_board():
     for i in range(9):
         pygame.draw.line(screen, 'black', (0, 100 * i), (800, 100 * i), 2);
         pygame.draw.line(screen, 'black', (100 * i, 0), (100 * i, 800), 2)
-    screen.blit(medium_font.render('FORFEIT', True, 'black'), (810, 830))
+    pygame.draw.rect(screen, (210, 180, 140), regame_btn_rect);
+    pygame.draw.rect(screen, 'black', regame_btn_rect, 2)
+    draw_text_center('REGAME', medium_font, 'black', screen, regame_btn_rect)
     if white_promote or black_promote:
         pygame.draw.rect(screen, 'gray', [0, 800, WIDTH - 200, 100]);
         pygame.draw.rect(screen, 'gold', [0, 800, WIDTH - 200, 100], 5)
@@ -421,12 +457,9 @@ def select_promotion():
 
 
 # ===== Main Game Loop =====
-white_options, black_options = [], []
-black_options, white_options = check_options(black_pieces, black_locations, 'black'), check_options(white_pieces,
-                                                                                                    white_locations,
-                                                                                                    'white')
+notification_message = {'text': '', 'display_time': 0}
+reset_game(show_message=False)  # #### 재시작 기능 수정: 최초 실행 시 메시지 미표시 ####
 run = True
-selected_piece = None
 
 while run:
     timer.tick(fps)
@@ -442,6 +475,7 @@ while run:
         draw_valid(valid_moves)
         if selected_piece == 'king': draw_castling(castling_moves)
     if quiz_state != 'INACTIVE': draw_quiz_ui()
+    draw_notification()
 
     if quiz_state == 'VERSUS' and time.time() - quiz_info['start_time'] > 2:
         if attack_context['defender_piece'] == 'king':
@@ -461,6 +495,11 @@ while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT: run = False
 
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if regame_btn_rect.collidepoint(event.pos):
+                reset_game();
+                continue
+
         if quiz_state != 'INACTIVE':
             if quiz_state == 'KING_SKILL_SELECTION' and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for i, (piece_name, _) in enumerate(quiz_info['king_skill_options']):
@@ -468,14 +507,16 @@ while run:
                         attack_context['defender_piece'] = piece_name;
                         quiz_state = 'CATEGORY_SELECTION'
                         break
-
             if quiz_state == 'CATEGORY_SELECTION' and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for i, category in enumerate(quiz_info['categories']):
                     if pygame.Rect(250, 250 + i * 100, 300, 80).collidepoint(event.pos):
-                        # #### 나이트(방어) 스킬 적용 ####
+                        original_category = category
                         if attack_context['defender_piece'] == 'knight':
-                            new_category = random.choice([c for c in QUIZ_CATEGORIES if c != category])
+                            new_category = random.choice([c for c in QUIZ_CATEGORIES if c != category]);
                             category = new_category
+                            notification_message['text'] = f"나이트 스킬! 주제가 {original_category}에서 {new_category}로 변경됩니다!"
+                            notification_message['display_time'] = time.time() + 3
+
                         quiz_data = gemini_quiz.generate_quiz(category)
                         quiz_info.update(quiz_data);
                         quiz_info['user_answer'] = ''
@@ -485,32 +526,27 @@ while run:
                         pygame.key.start_text_input()
                         pygame.key.set_text_input_rect(pygame.Rect(150, 400, 500, 60))
                         break
-
             if quiz_state == 'ANSWERING':
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
-                    # #### 비숍(공격) 스킬 적용 ####
                     if quiz_info['reroll_available'] and pygame.Rect(300, 550, 200, 50).collidepoint(event.pos):
                         quiz_info['reroll_available'] = False
-                        category = gemini_quiz.generate_quiz(quiz_info['categories'][0])['question']
-                        quiz_data = gemini_quiz.generate_quiz(category)
+                        quiz_data = gemini_quiz.generate_quiz(quiz_info['categories'][0])
                         quiz_info.update(quiz_data);
-                        quiz_info['user_answer'] = ''
+                        quiz_info['user_answer'] = '';
                         apply_piece_skills()
-
                 if event.type == pygame.TEXTINPUT:
                     quiz_info['user_answer'] += event.text
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
                         is_correct = (''.join(filter(str.isalnum, quiz_info['user_answer'].lower())) == quiz_info[
                             'answer_clean'])
-                        # #### 퀸(방어) 스킬 적용 ####
                         if is_correct and quiz_info['current_question_index'] < quiz_info['questions_to_solve'] - 1:
                             quiz_info['current_question_index'] += 1
                             quiz_data = gemini_quiz.generate_quiz(quiz_info['categories'][0])
                             quiz_info.update(quiz_data);
                             quiz_info['user_answer'] = ''
-                            apply_piece_skills()  # 스킬 재적용
-                            quiz_info['start_time'] = time.time()  # 시간 초기화
+                            apply_piece_skills();
+                            quiz_info['start_time'] = time.time()
                         else:
                             pygame.key.stop_text_input();
                             quiz_info['result'] = is_correct
@@ -544,7 +580,7 @@ while run:
                     else:
                         white_ep, black_ep = new_ep, (100, 100)
                     turn_step = 2 if turn_step < 2 else 0
-                    selection, valid_moves = 100, []
+                    selection, valid_moves = 100, [];
                     black_options, white_options = check_options(black_pieces, black_locations, 'black'), check_options(
                         white_pieces, white_locations, 'white')
 
@@ -591,22 +627,7 @@ while run:
                     end_turn()
 
         if event.type == pygame.KEYDOWN and game_over and event.key == pygame.K_RETURN:
-            white_pieces, white_locations, white_moved = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop',
-                                                          'knight', 'rook'] + ['pawn'] * 8, [(i, 0) for i in
-                                                                                             range(8)] + [(i, 1) for i
-                                                                                                          in
-                                                                                                          range(8)], [
-                                                             False] * 16
-            black_pieces, black_locations, black_moved = ['rook', 'knight', 'bishop', 'king', 'queen', 'bishop',
-                                                          'knight', 'rook'] + ['pawn'] * 8, [(i, 7) for i in
-                                                                                             range(8)] + [(i, 6) for i
-                                                                                                          in
-                                                                                                          range(8)], [
-                                                             False] * 16
-            captured_pieces_white, captured_pieces_black, turn_step, selection, valid_moves, winner, game_over = [], [], 0, 100, [], '', False
-            white_ep, black_ep, white_options, black_options = (100, 100), (100, 100), [], []
-            black_options, white_options = check_options(black_pieces, black_locations, 'black'), check_options(
-                white_pieces, white_locations, 'white')
+            reset_game()
 
     if quiz_state == 'RESULT' and time.time() - quiz_info['result_time'] > 2.5:
         resolve_attack();
