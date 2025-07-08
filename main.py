@@ -8,9 +8,9 @@ WIDTH = 1000
 HEIGHT = 900
 screen = pygame.display.set_mode([WIDTH, HEIGHT])
 pygame.display.set_caption('Two-Player Pygame Chess!')
-font = pygame.font.Font('freesansbold.ttf', 20)
-medium_font = pygame.font.Font('freesansbold.ttf', 40)
-big_font = pygame.font.Font('freesansbold.ttf', 50)
+font = pygame.font.SysFont('malgungothic', 20)
+medium_font = pygame.font.SysFont('malgungothic', 40)
+big_font = pygame.font.SysFont('malgungothic', 50)
 timer = pygame.time.Clock()
 fps = 60
 # game variables and images
@@ -98,8 +98,8 @@ def draw_board():
         pygame.draw.rect(screen, 'gray', [0, 800, WIDTH, 100])
         pygame.draw.rect(screen, 'gold', [0, 800, WIDTH, 100], 5)
         pygame.draw.rect(screen, 'gold', [800, 0, 200, HEIGHT], 5)
-        status_text = ['하양: 움직일 기물을 정하세요!', '하양: 기물을 움직일 목적지를 정하세요!',
-                       '검정: 움직일 기물을 정하세요!', '검정: 기물을 움직일 목적지를 정하세요!']
+        status_text = ['하양: 움직일 기물을 정하세요!', '하양: 목적지를 정하세요!',
+                       '검정: 움직일 기물을 정하세요!', '검정: 목적지를 정하세요!']
         screen.blit(big_font.render(status_text[turn_step], True, 'black'), (20, 820))
         for i in range(9):
             pygame.draw.line(screen, 'black', (0, 100 * i), (800, 100 * i), 2)
