@@ -21,7 +21,34 @@ def draw_quiz_ui():
     overlay.fill((0, 0, 0, 220))
     screen.blit(overlay, (0, 0))
 
-    if quiz_state == 'CATEGORY_SELECTION':
+    # #### 대결 화면 기능 추가 ####
+    if quiz_state == 'VERSUS':
+        # 공격자 기물 이미지 가져오기
+        attacker_color = attack_context['attacker_color']
+        attacker_pieces = white_pieces if attacker_color == 'white' else black_pieces
+        attacker_images = white_images if attacker_color == 'white' else black_images
+        attacker_piece_name = attacker_pieces[attack_context['attacker_index']]
+        attacker_img = attacker_images[piece_list.index(attacker_piece_name)]
+
+        # 수비자 기물 이미지 가져오기
+        defender_color = 'black' if attacker_color == 'white' else 'white'
+        defender_pieces = black_pieces if defender_color == 'black' else white_pieces
+        defender_images = black_images if defender_color == 'black' else white_images
+        defender_piece_name = defender_pieces[attack_context['defender_index']]
+        defender_img = defender_images[piece_list.index(defender_piece_name)]
+
+        # 화면에 그리기
+        attacker_img_large = pygame.transform.scale(attacker_img, (150, 150))
+        defender_img_large = pygame.transform.scale(defender_img, (150, 150))
+
+        screen.blit(attacker_img_large, (150, 325))
+        screen.blit(defender_img_large, (500, 325))
+
+        draw_text_center('VS', big_font, 'red', screen, pygame.Rect(0, 350, 800, 100))
+        draw_text_center('잠시 후 퀴즈가 시작됩니다...', font, 'light gray', screen, pygame.Rect(0, 500, 800, 100))
+
+
+    elif quiz_state == 'CATEGORY_SELECTION':
         draw_text_center('퀴즈 분야를 선택하세요!', big_font, 'white', screen, pygame.Rect(0, 100, 800, 100))
         for i, category in enumerate(quiz_info['categories']):
             btn_rect = pygame.Rect(250, 250 + i * 100, 300, 80)
@@ -30,7 +57,14 @@ def draw_quiz_ui():
             draw_text_center(category, medium_font, 'white', screen, btn_rect)
 
     elif quiz_state == 'ANSWERING':
-        q_rect = pygame.Rect(50, 150, 700, 200)
+        current_time = time.time();
+        elapsed_time = current_time - quiz_info['start_time']
+        remaining_time = max(0, 30 - elapsed_time)
+        timer_text = f"남은 시간: {remaining_time:.1f}초";
+        timer_color = 'yellow' if remaining_time > 10 else 'red'
+        draw_text_center(timer_text, font, timer_color, screen, pygame.Rect(0, 50, 800, 50))
+
+        q_rect = pygame.Rect(50, 150, 700, 150)
         words, lines, current_line = quiz_info['question'].split(' '), [], ""
         for word in words:
             if font.size(current_line + " " + word)[0] < q_rect.width - 20:
@@ -40,8 +74,12 @@ def draw_quiz_ui():
         lines.append(current_line.strip())
         for i, line in enumerate(lines):
             draw_text_center(line, font, 'white', screen,
-                             pygame.Rect(q_rect.x, q_rect.y + 50 + i * font.get_linesize(), q_rect.width,
+                             pygame.Rect(q_rect.x, q_rect.y + 20 + i * font.get_linesize(), q_rect.width,
                                          font.get_linesize()))
+
+        if remaining_time <= 15:
+            hint_text = "힌트: " + "-" * len(quiz_info['answer_clean'])
+            draw_text_center(hint_text, font, 'cyan', screen, pygame.Rect(0, 320, 800, 50))
 
         input_box = pygame.Rect(150, 400, 500, 60)
         pygame.draw.rect(screen, 'white', input_box);
@@ -60,7 +98,6 @@ def draw_quiz_ui():
 
 def resolve_attack():
     global turn_step, selection, valid_moves, white_options, black_options, white_ep, black_ep, winner
-
     context = attack_context
     if quiz_info['result']:
         pieces, locs, moved, cap_pieces, opp_pieces, opp_locs, opp_moved = (white_pieces, white_locations, white_moved,
@@ -159,8 +196,7 @@ def check_king(position, color, opponent_options):
     friends_list = white_locations if color == 'white' else black_locations
     for dx, dy in [(1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)]:
         target = (position[0] + dx, position[1] + dy)
-        if 0 <= target[0] <= 7 and 0 <= target[1] <= 7 and target not in friends_list:
-            moves_list.append(target)
+        if 0 <= target[0] <= 7 and 0 <= target[1] <= 7 and target not in friends_list: moves_list.append(target)
     return moves_list, castle_moves
 
 
@@ -347,6 +383,16 @@ while run:
         if selected_piece == 'king': draw_castling(castling_moves)
     if quiz_state != 'INACTIVE': draw_quiz_ui()
 
+    if quiz_state == 'VERSUS' and time.time() - quiz_info['start_time'] > 2:
+        quiz_state = 'CATEGORY_SELECTION'
+
+    if quiz_state == 'ANSWERING':
+        elapsed_time = time.time() - quiz_info['start_time']
+        if elapsed_time > 30:
+            pygame.key.stop_text_input()
+            quiz_info['result'] = False
+            quiz_state, quiz_info['result_time'] = 'RESULT', time.time()
+
     for event in pygame.event.get():
         if event.type == pygame.QUIT: run = False
 
@@ -356,10 +402,11 @@ while run:
                     btn_rect = pygame.Rect(250, 250 + i * 100, 300, 80)
                     if btn_rect.collidepoint(event.pos):
                         quiz_data = gemini_quiz.generate_quiz(category)
-                        quiz_info.update(quiz_data)
-                        quiz_info['user_answer'] = ''  # #### 오류 수정: 사용자 답변 기록 초기화 ####
+                        quiz_info.update(quiz_data);
+                        quiz_info['user_answer'] = ''
+                        quiz_info['start_time'] = time.time()
                         quiz_state = 'ANSWERING'
-                        pygame.key.start_text_input()
+                        pygame.key.start_text_input();
                         pygame.key.set_text_input_rect(pygame.Rect(150, 400, 500, 60))
                         break
 
@@ -408,7 +455,10 @@ while run:
 
                 if click_coords in valid_moves:
                     if click_coords in opp_locs:
-                        quiz_state, quiz_info['categories'] = 'CATEGORY_SELECTION', random.sample(QUIZ_CATEGORIES, 3)
+                        # #### 대결 화면 기능 추가 ####
+                        quiz_state = 'VERSUS'
+                        quiz_info['start_time'] = time.time()  # 대결 화면 표시 시작 시간
+                        quiz_info['categories'] = random.sample(QUIZ_CATEGORIES, 3)
                         attack_context.update(
                             {'attacker_color': 'white' if turn_step < 2 else 'black', 'attacker_index': selection,
                              'defender_index': opp_locs.index(click_coords), 'target_coords': click_coords,
