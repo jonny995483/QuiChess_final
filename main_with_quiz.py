@@ -21,32 +21,29 @@ def draw_quiz_ui():
     overlay.fill((0, 0, 0, 220))
     screen.blit(overlay, (0, 0))
 
-    # #### 대결 화면 기능 추가 ####
     if quiz_state == 'VERSUS':
-        # 공격자 기물 이미지 가져오기
         attacker_color = attack_context['attacker_color']
-        attacker_pieces = white_pieces if attacker_color == 'white' else black_pieces
         attacker_images = white_images if attacker_color == 'white' else black_images
-        attacker_piece_name = attacker_pieces[attack_context['attacker_index']]
-        attacker_img = attacker_images[piece_list.index(attacker_piece_name)]
+        attacker_img = attacker_images[piece_list.index(attack_context['attacker_piece'])]
+        defender_images = black_images if attacker_color == 'white' else white_images
+        defender_img = defender_images[piece_list.index(attack_context['defender_piece'])]
 
-        # 수비자 기물 이미지 가져오기
-        defender_color = 'black' if attacker_color == 'white' else 'white'
-        defender_pieces = black_pieces if defender_color == 'black' else white_pieces
-        defender_images = black_images if defender_color == 'black' else white_images
-        defender_piece_name = defender_pieces[attack_context['defender_index']]
-        defender_img = defender_images[piece_list.index(defender_piece_name)]
-
-        # 화면에 그리기
         attacker_img_large = pygame.transform.scale(attacker_img, (150, 150))
         defender_img_large = pygame.transform.scale(defender_img, (150, 150))
 
-        screen.blit(attacker_img_large, (150, 325))
+        screen.blit(attacker_img_large, (150, 325));
         screen.blit(defender_img_large, (500, 325))
-
         draw_text_center('VS', big_font, 'red', screen, pygame.Rect(0, 350, 800, 100))
         draw_text_center('잠시 후 퀴즈가 시작됩니다...', font, 'light gray', screen, pygame.Rect(0, 500, 800, 100))
 
+    elif quiz_state == 'KING_SKILL_SELECTION':
+        draw_text_center('킹의 수비 스킬 발동!', big_font, 'gold', screen, pygame.Rect(0, 100, 800, 100))
+        draw_text_center('사용할 아군 기물의 스킬을 선택하세요.', font, 'white', screen, pygame.Rect(0, 180, 800, 50))
+        for i, (piece_name, skill_desc) in enumerate(quiz_info['king_skill_options']):
+            btn_rect = pygame.Rect(150, 250 + i * 80, 500, 60)
+            pygame.draw.rect(screen, 'dark violet', btn_rect);
+            pygame.draw.rect(screen, 'white', btn_rect, 3)
+            draw_text_center(f"{piece_name.title()}: {skill_desc}", font, 'white', screen, btn_rect)
 
     elif quiz_state == 'CATEGORY_SELECTION':
         draw_text_center('퀴즈 분야를 선택하세요!', big_font, 'white', screen, pygame.Rect(0, 100, 800, 100))
@@ -59,10 +56,14 @@ def draw_quiz_ui():
     elif quiz_state == 'ANSWERING':
         current_time = time.time();
         elapsed_time = current_time - quiz_info['start_time']
-        remaining_time = max(0, 30 - elapsed_time)
+        remaining_time = max(0, quiz_info['limit_time'] - elapsed_time)
         timer_text = f"남은 시간: {remaining_time:.1f}초";
         timer_color = 'yellow' if remaining_time > 10 else 'red'
         draw_text_center(timer_text, font, timer_color, screen, pygame.Rect(0, 50, 800, 50))
+
+        if quiz_info['questions_to_solve'] > 1:
+            draw_text_center(f"문제 {quiz_info['current_question_index'] + 1} / {quiz_info['questions_to_solve']}", font,
+                             'white', pygame.Rect(0, 90, 800, 50))
 
         q_rect = pygame.Rect(50, 150, 700, 150)
         words, lines, current_line = quiz_info['question'].split(' '), [], ""
@@ -77,9 +78,23 @@ def draw_quiz_ui():
                              pygame.Rect(q_rect.x, q_rect.y + 20 + i * font.get_linesize(), q_rect.width,
                                          font.get_linesize()))
 
-        if remaining_time <= 15:
+        hint_text = ""
+        if remaining_time <= quiz_info['limit_time'] * quiz_info['hint_time_ratio']:
             hint_text = "힌트: " + "-" * len(quiz_info['answer_clean'])
+        # #### 퀸/나이트 공격 스킬 시간 변경 ####
+        if remaining_time <= 15:
+            if attack_context['attacker_piece'] == 'queen':
+                hint_text = f"힌트: {quiz_info['answer'][0]}" + "-" * (len(quiz_info['answer_clean']) - 1)
+            if attack_context['attacker_piece'] == 'knight' and 'knight_hint' in quiz_info:
+                hint_text = f"힌트: {quiz_info['knight_hint']}"
+        if hint_text:
             draw_text_center(hint_text, font, 'cyan', screen, pygame.Rect(0, 320, 800, 50))
+
+        if quiz_info['reroll_available']:
+            reroll_btn = pygame.Rect(300, 550, 200, 50)
+            pygame.draw.rect(screen, 'orange', reroll_btn);
+            pygame.draw.rect(screen, 'white', reroll_btn, 2)
+            draw_text_center("퀴즈 교체 (클릭)", font, 'black', screen, reroll_btn)
 
         input_box = pygame.Rect(150, 400, 500, 60)
         pygame.draw.rect(screen, 'white', input_box);
@@ -96,6 +111,51 @@ def draw_quiz_ui():
         draw_text_center("잠시 후 게임으로 돌아갑니다...", font, 'light gray', screen, pygame.Rect(0, 500, 800, 100))
 
 
+def apply_piece_skills():
+    global quiz_info
+    attacker_piece = attack_context['attacker_piece']
+    defender_piece = attack_context['defender_piece']
+
+    # #### 룩 vs 룩 스킬 무효화 ####
+    if attacker_piece == 'rook' and defender_piece == 'rook':
+        print("룩과 룩의 대결! 모든 스킬이 무효화됩니다.")
+        quiz_info['limit_time'] = 30
+        quiz_info['hint_time_ratio'] = 0.5
+        quiz_info['reroll_available'] = False
+        quiz_info['questions_to_solve'] = 1
+        return
+
+    # 기본값 초기화
+    quiz_info['limit_time'] = 30
+    quiz_info['hint_time_ratio'] = 0.5
+    quiz_info['reroll_available'] = False
+    quiz_info['questions_to_solve'] = 1
+    if 'knight_hint' in quiz_info: del quiz_info['knight_hint']
+
+    # 공격 스킬 적용
+    if attacker_piece == 'rook':
+        quiz_info['limit_time'] = 45; quiz_info['hint_time_ratio'] = 30 / 45
+    elif attacker_piece == 'bishop':
+        quiz_info['reroll_available'] = True
+    elif attacker_piece == 'knight':
+        answer = quiz_info['answer_clean']
+        if len(answer) > 0:
+            rand_idx = random.randint(0, len(answer) - 1)
+            hint_chars = ['-' for _ in answer]
+            chosung = "ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ"
+            cho_code = (ord(answer[rand_idx]) - ord('가')) // 588
+            hint_chars[rand_idx] = chosung[cho_code]
+            quiz_info['knight_hint'] = "".join(hint_chars)
+
+    # 방어 스킬 적용
+    if defender_piece == 'queen':
+        quiz_info['questions_to_solve'] = 2
+    elif defender_piece == 'rook':
+        quiz_info['limit_time'] = 20; quiz_info['hint_time_ratio'] = 10 / 20
+    elif defender_piece == 'bishop':
+        quiz_info['question'] = quiz_info['question'][::-1]
+
+
 def resolve_attack():
     global turn_step, selection, valid_moves, white_options, black_options, white_ep, black_ep, winner
     context = attack_context
@@ -106,7 +166,7 @@ def resolve_attack():
                                                                                                                  'attacker_color'] == 'white' else (
             black_pieces, black_locations, black_moved, captured_pieces_black, white_pieces, white_locations,
             white_moved)
-        locs[context['attacker_index']] = context['target_coords']
+        locs[context['attacker_index']] = context['target_coords'];
         moved[context['attacker_index']] = True
         cap_pieces.append(opp_pieces[context['defender_index']])
         if opp_pieces[context['defender_index']] == 'king': winner = context['attacker_color']
@@ -122,7 +182,6 @@ def resolve_attack():
         pieces.pop(context['attacker_index']);
         locs.pop(context['attacker_index']);
         moved.pop(context['attacker_index'])
-
     new_ep = check_ep(context['original_attacker_coords'], context['target_coords'], context['original_turn_step'])
     if context['attacker_color'] == 'white':
         white_ep, black_ep, turn_step = new_ep, (100, 100), 2
@@ -134,6 +193,7 @@ def resolve_attack():
     selection, valid_moves = 100, []
 
 
+# 이하 함수들은 거의 변경 없음 (주석 생략)
 def draw_board():
     for r in range(8):
         for c in range(8):
@@ -378,47 +438,83 @@ while run:
     draw_check()
     if not game_over and (white_promote or black_promote): draw_promotion(); select_promotion()
     if selection != 100:
-        valid_moves = check_valid_moves()
+        valid_moves = check_valid_moves();
         draw_valid(valid_moves)
         if selected_piece == 'king': draw_castling(castling_moves)
     if quiz_state != 'INACTIVE': draw_quiz_ui()
 
     if quiz_state == 'VERSUS' and time.time() - quiz_info['start_time'] > 2:
-        quiz_state = 'CATEGORY_SELECTION'
+        if attack_context['defender_piece'] == 'king':
+            quiz_state = 'KING_SKILL_SELECTION'
+            def_color = 'black' if attack_context['attacker_color'] == 'white' else 'white'
+            def_pieces = black_pieces if def_color == 'black' else white_pieces
+            skill_map = {'queen': '문제 2개 풀기', 'rook': '제한시간 20초', 'bishop': '질문 뒤집기', 'knight': '주제 변경'}
+            quiz_info['king_skill_options'] = [(p, skill_map[p]) for p in set(def_pieces) if p in skill_map]
+        else:
+            quiz_state = 'CATEGORY_SELECTION'
 
-    if quiz_state == 'ANSWERING':
-        elapsed_time = time.time() - quiz_info['start_time']
-        if elapsed_time > 30:
-            pygame.key.stop_text_input()
-            quiz_info['result'] = False
-            quiz_state, quiz_info['result_time'] = 'RESULT', time.time()
+    if quiz_state == 'ANSWERING' and time.time() - quiz_info['start_time'] > quiz_info['limit_time']:
+        pygame.key.stop_text_input();
+        quiz_info['result'] = False
+        quiz_state, quiz_info['result_time'] = 'RESULT', time.time()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT: run = False
 
         if quiz_state != 'INACTIVE':
+            if quiz_state == 'KING_SKILL_SELECTION' and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                for i, (piece_name, _) in enumerate(quiz_info['king_skill_options']):
+                    if pygame.Rect(150, 250 + i * 80, 500, 60).collidepoint(event.pos):
+                        attack_context['defender_piece'] = piece_name;
+                        quiz_state = 'CATEGORY_SELECTION'
+                        break
+
             if quiz_state == 'CATEGORY_SELECTION' and event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 for i, category in enumerate(quiz_info['categories']):
-                    btn_rect = pygame.Rect(250, 250 + i * 100, 300, 80)
-                    if btn_rect.collidepoint(event.pos):
+                    if pygame.Rect(250, 250 + i * 100, 300, 80).collidepoint(event.pos):
+                        # #### 나이트(방어) 스킬 적용 ####
+                        if attack_context['defender_piece'] == 'knight':
+                            new_category = random.choice([c for c in QUIZ_CATEGORIES if c != category])
+                            category = new_category
                         quiz_data = gemini_quiz.generate_quiz(category)
                         quiz_info.update(quiz_data);
                         quiz_info['user_answer'] = ''
+                        apply_piece_skills();
                         quiz_info['start_time'] = time.time()
-                        quiz_state = 'ANSWERING'
-                        pygame.key.start_text_input();
+                        quiz_state = 'ANSWERING';
+                        pygame.key.start_text_input()
                         pygame.key.set_text_input_rect(pygame.Rect(150, 400, 500, 60))
                         break
 
             if quiz_state == 'ANSWERING':
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+                    # #### 비숍(공격) 스킬 적용 ####
+                    if quiz_info['reroll_available'] and pygame.Rect(300, 550, 200, 50).collidepoint(event.pos):
+                        quiz_info['reroll_available'] = False
+                        category = gemini_quiz.generate_quiz(quiz_info['categories'][0])['question']
+                        quiz_data = gemini_quiz.generate_quiz(category)
+                        quiz_info.update(quiz_data);
+                        quiz_info['user_answer'] = ''
+                        apply_piece_skills()
+
                 if event.type == pygame.TEXTINPUT:
                     quiz_info['user_answer'] += event.text
                 elif event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_RETURN:
-                        pygame.key.stop_text_input()
-                        user_ans_clean = ''.join(filter(str.isalnum, quiz_info['user_answer'].lower()))
-                        quiz_info['result'] = (user_ans_clean == quiz_info['answer_clean'])
-                        quiz_state, quiz_info['result_time'] = 'RESULT', time.time()
+                        is_correct = (''.join(filter(str.isalnum, quiz_info['user_answer'].lower())) == quiz_info[
+                            'answer_clean'])
+                        # #### 퀸(방어) 스킬 적용 ####
+                        if is_correct and quiz_info['current_question_index'] < quiz_info['questions_to_solve'] - 1:
+                            quiz_info['current_question_index'] += 1
+                            quiz_data = gemini_quiz.generate_quiz(quiz_info['categories'][0])
+                            quiz_info.update(quiz_data);
+                            quiz_info['user_answer'] = ''
+                            apply_piece_skills()  # 스킬 재적용
+                            quiz_info['start_time'] = time.time()  # 시간 초기화
+                        else:
+                            pygame.key.stop_text_input();
+                            quiz_info['result'] = is_correct
+                            quiz_state, quiz_info['result_time'] = 'RESULT', time.time()
                     elif event.key == pygame.K_BACKSPACE:
                         quiz_info['user_answer'] = quiz_info['user_answer'][:-1]
             continue
@@ -455,29 +551,29 @@ while run:
 
                 if click_coords in valid_moves:
                     if click_coords in opp_locs:
-                        # #### 대결 화면 기능 추가 ####
-                        quiz_state = 'VERSUS'
-                        quiz_info['start_time'] = time.time()  # 대결 화면 표시 시작 시간
-                        quiz_info['categories'] = random.sample(QUIZ_CATEGORIES, 3)
+                        defender_index = opp_locs.index(click_coords)
+                        quiz_state = 'VERSUS';
+                        quiz_info['start_time'] = time.time()
+                        quiz_info['categories'] = random.sample(QUIZ_CATEGORIES, 3);
+                        quiz_info['current_question_index'] = 0
                         attack_context.update(
-                            {'attacker_color': 'white' if turn_step < 2 else 'black', 'attacker_index': selection,
-                             'defender_index': opp_locs.index(click_coords), 'target_coords': click_coords,
-                             'original_attacker_coords': original_coords, 'original_turn_step': turn_step})
+                            {'attacker_color': 'white' if turn_step < 2 else 'black', 'attacker_piece': selected_piece,
+                             'defender_piece': (black_pieces if turn_step < 2 else white_pieces)[defender_index],
+                             'attacker_index': selection, 'defender_index': defender_index,
+                             'target_coords': click_coords, 'original_attacker_coords': original_coords,
+                             'original_turn_step': turn_step})
                         selection, valid_moves = 100, []
                     else:
-                        pieces, locs, moved, _, opp_pieces, opp_locs, opp_moved, captured = (white_pieces,
-                                                                                             white_locations,
-                                                                                             white_moved, white_ep,
-                                                                                             black_pieces,
-                                                                                             black_locations,
-                                                                                             black_moved,
-                                                                                             captured_pieces_white) if turn_step < 2 else (
-                            black_pieces, black_locations, black_moved, black_ep, white_pieces, white_locations,
-                            white_moved, captured_pieces_black)
+                        locs, moved, _, opp_pieces, opp_locs, opp_moved, captured = (white_locations, white_moved,
+                                                                                     white_ep, black_pieces,
+                                                                                     black_locations, black_moved,
+                                                                                     captured_pieces_white) if turn_step < 2 else (
+                            black_locations, black_moved, black_ep, white_pieces, white_locations, white_moved,
+                            captured_pieces_black)
                         locs[selection] = click_coords;
                         moved[selection] = True
                         ep_target, victim_y_offset = (black_ep, -1) if turn_step < 2 else (white_ep, 1)
-                        if click_coords == ep_target:
+                        if click_coords == ep_target and ep_target != (100, 100):
                             v_coord = (ep_target[0], ep_target[1] + victim_y_offset)
                             if v_coord in opp_locs:
                                 v_idx = opp_locs.index(v_coord)
@@ -485,12 +581,10 @@ while run:
                                 opp_locs.pop(v_idx);
                                 opp_moved.pop(v_idx)
                         end_turn()
-
                 elif selected_piece == 'king' and any(click_coords == move[0] for move in castling_moves):
                     move = next(m for m in castling_moves if click_coords == m[0])
                     start_row = 0 if turn_step < 2 else 7
-                    king_idx = current_locs.index((4, start_row))
-                    rook_start_x = 0 if click_coords[0] < 4 else 7
+                    king_idx, rook_start_x = current_locs.index((4, start_row)), 0 if click_coords[0] < 4 else 7
                     rook_idx = current_locs.index((rook_start_x, start_row))
                     current_locs[king_idx], current_locs[rook_idx] = move[0], move[1]
                     current_moved[king_idx], current_moved[rook_idx] = True, True
@@ -515,10 +609,8 @@ while run:
                 white_pieces, white_locations, 'white')
 
     if quiz_state == 'RESULT' and time.time() - quiz_info['result_time'] > 2.5:
-        resolve_attack()
+        resolve_attack();
         quiz_state = 'INACTIVE'
-    if winner != '':
-        game_over = True
-        draw_game_over()
+    if winner != '': game_over = True; draw_game_over()
     pygame.display.flip()
 pygame.quit()
