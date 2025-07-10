@@ -1,8 +1,8 @@
-# two player chess in python with Pygame!
-# pawn double space checking
-# castling
-# en passant
-# pawn promotion
+# 특수 규칙들
+# 폰 더블 스페이스 체크
+# 캐슬링
+# 앙파
+# 폰 승격
 
 import pygame
 from constants import *
@@ -10,7 +10,7 @@ from constants import *
 pygame.init()
 
 
-# draw main game board
+# 게임 보드 그리기기
 def draw_board():
     for i in range(32):
         column = i % 4
@@ -35,7 +35,7 @@ def draw_board():
             screen.blit(big_font.render('Select Piece to Promote Pawn', True, 'black'), (20, 820))
 
 
-# draw pieces onto board
+# 보드에 기물 그리기기
 def draw_pieces():
     for i in range(len(white_pieces)):
         index = piece_list.index(white_pieces[i])
