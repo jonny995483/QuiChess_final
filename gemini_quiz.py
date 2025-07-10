@@ -1,4 +1,3 @@
-# --- START OF FILE gemini_quiz.py (수정 완료) ---
 
 import google.generativeai as genai
 import os
@@ -9,9 +8,8 @@ from dotenv import load_dotenv
 # .env 파일에서 환경 변수 로드
 load_dotenv()
 
-
+# Gemini API 키를 설정합니다.
 def setup_gemini():
-    """Gemini API 키를 설정합니다."""
     try:
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
@@ -20,10 +18,10 @@ def setup_gemini():
         print("Gemini API가 성공적으로 설정되었습니다.")
     except Exception as e:
         print(f"Gemini 설정 중 오류 발생: {e}")
-        # API 설정 실패 시에도 게임 진행을 위해 종료하지 않음
+        # API 설정 실패 시에도 게임 진행을 위해 종료 X
 
 
-# 로컬 퀴즈 데이터 로드
+# 로컬 퀴즈 데이터 로드 json 파일
 def load_local_quizzes():
     try:
         with open('quiz_data.json', 'r', encoding='utf-8') as f:
@@ -35,9 +33,8 @@ def load_local_quizzes():
 
 local_quizzes = load_local_quizzes()
 
-
+# 미리 설정한 json 파일에서 랜덤 퀴즈 가져오기
 def get_local_quiz(category):
-    """로컬 퀴즈 데이터에서 랜덤 퀴즈를 가져옵니다."""
     if local_quizzes and category in local_quizzes and local_quizzes[category]:
         return random.choice(local_quizzes[category])
     else:
@@ -48,8 +45,8 @@ def get_local_quiz(category):
         }
 
 
+# API 호출로 퀴즈 생성하기 호출 실패시 로컬 퀴즈(json) 사용
 def generate_quiz(category):
-    """지정된 카테고리에 대한 퀴즈를 생성합니다. API 호출 실패 시 로컬 퀴즈를 사용합니다."""
     try:
         model = genai.GenerativeModel('gemini-1.5-flash')
 
@@ -76,5 +73,3 @@ def generate_quiz(category):
     quiz_data['answer_clean'] = ''.join(filter(str.isalnum, quiz_data['answer'].lower()))
 
     return quiz_data
-
-# --- END OF FILE gemini_quiz.py (수정 완료) ---
