@@ -104,7 +104,7 @@ def check_king(position, color):
     return moves_list, castle_moves
 
 
-# check queen valid moves
+# 퀸 유효한 움직임 확인
 def check_queen(position, color):
     moves_list = check_bishop(position, color)
     second_list = check_rook(position, color)
@@ -113,7 +113,7 @@ def check_queen(position, color):
     return moves_list
 
 
-# check bishop moves
+# 비숍 유효한 움직임 확인인
 def check_bishop(position, color):
     moves_list = []
     if color == 'white':
@@ -149,7 +149,7 @@ def check_bishop(position, color):
     return moves_list
 
 
-# check rook moves
+# 룩 움직임 확인인
 def check_rook(position, color):
     moves_list = []
     if color == 'white':
@@ -185,7 +185,7 @@ def check_rook(position, color):
     return moves_list
 
 
-# check valid pawn moves
+# 폰 움직임 확인인
 def check_pawn(position, color):
     moves_list = []
     if color == 'white':
@@ -225,7 +225,7 @@ def check_pawn(position, color):
     return moves_list
 
 
-# check valid knight moves
+# 나이트 움직임 확인
 def check_knight(position, color):
     moves_list = []
     if color == 'white':
@@ -243,7 +243,7 @@ def check_knight(position, color):
     return moves_list
 
 
-# check for valid moves for just selected piece
+# 기물 선택시 유효한 움직임 확인인
 def check_valid_moves():
     if turn_step < 2:
         options_list = white_options
@@ -253,7 +253,7 @@ def check_valid_moves():
     return valid_options
 
 
-# draw valid moves on screen
+# 화면에 유효한 움직임 그리기
 def draw_valid(moves):
     if turn_step < 2:
         color = 'red'
@@ -263,7 +263,7 @@ def draw_valid(moves):
         pygame.draw.circle(screen, color, (moves[i][0] * 100 + 50, moves[i][1] * 100 + 50), 5)
 
 
-# draw captured pieces on side of screen
+# 죽은 기물들 옆에 표시
 def draw_captured():
     for i in range(len(captured_pieces_white)):
         captured_piece = captured_pieces_white[i]
@@ -275,7 +275,7 @@ def draw_captured():
         screen.blit(small_white_images[index], (925, 5 + 50 * i))
 
 
-# draw a flashing square around king if in check
+# 킹 체크당할때 알려주기기
 def draw_check():
     global check
     check = False
@@ -307,7 +307,7 @@ def draw_game_over():
     screen.blit(font.render(f'Press ENTER to Restart!', True, 'white'), (210, 240))
 
 
-# check en passant because people on the internet won't stop bugging me for it
+# 앙파상 확인
 def check_ep(old_coords, new_coords):
     if turn_step <= 1:
         index = white_locations.index(old_coords)
@@ -325,7 +325,7 @@ def check_ep(old_coords, new_coords):
     return ep_coords
 
 
-# add castling
+# 캐슬링 추가가
 def check_castling():
     # king must not currently be in check, neither the rook nor king has moved previously, nothing between
     # and the king does not pass through or finish on an attacked piece
@@ -396,7 +396,7 @@ def draw_castling(moves):
                          (moves[i][1][0] * 100 + 50, moves[i][1][1] * 100 + 70), 2)
 
 
-# add pawn promotion
+# 폰 승격 추가가
 def check_promotion():
     pawn_indexes = []
     white_promotion = False
@@ -448,7 +448,7 @@ def check_promo_select():
         black_pieces[promo_index] = black_promotions[y_pos]
 
 
-# main game loop
+# 메인 게임 루프
 black_options = check_options(black_pieces, black_locations, 'black')
 white_options = check_options(white_pieces, white_locations, 'white')
 run = True
