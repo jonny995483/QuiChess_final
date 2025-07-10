@@ -1,3 +1,5 @@
+# 클래식한 기본 체스
+
 import pygame
 
 pygame.init()
