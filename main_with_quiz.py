@@ -1,4 +1,4 @@
-# --- START OF FILE main_with_quiz.py (최종 완성본) ---
+# 퀴즈 탑재 체스 최종 완성본
 
 import pygame
 import random
@@ -12,7 +12,7 @@ gemini_quiz.setup_gemini()
 regame_btn_rect = pygame.Rect(810, 820, 180, 60)
 
 
-# #### 재시작 기능 수정: 메시지 표시 여부 제어 ####
+# 재시작시 메세지 표시시
 def reset_game(show_message=True):
     global white_pieces, white_locations, white_moved, black_pieces, black_locations, black_moved
     global captured_pieces_white, captured_pieces_black, turn_step, selection, valid_moves
@@ -227,7 +227,6 @@ def resolve_attack():
     selection, valid_moves = 100, []
 
 
-# 이하 함수들은 변경 없음
 def draw_board():
     for r in range(8):
         for c in range(8):
@@ -456,7 +455,7 @@ def select_promotion():
             white_pieces, white_locations, 'white')
 
 
-# ===== Main Game Loop =====
+# 메인 게임 루프
 notification_message = {'text': '', 'display_time': 0}
 reset_game(show_message=False)  # #### 재시작 기능 수정: 최초 실행 시 메시지 미표시 ####
 run = True
