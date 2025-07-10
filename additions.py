@@ -60,7 +60,7 @@ def draw_pieces():
                                                   100, 100], 2)
 
 
-# function to check all pieces valid options on board
+# 보드에 유효한 기물들 확인 함수
 def check_options(pieces, locations, turn):
     global castling_moves
     moves_list = []
@@ -85,7 +85,7 @@ def check_options(pieces, locations, turn):
     return all_moves_list
 
 
-# check king valid moves
+# 킹 유효한 움직임 확인
 def check_king(position, color):
     moves_list = []
     castle_moves = check_castling()
