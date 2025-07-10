@@ -1,5 +1,3 @@
-# --- START OF FILE constants.py (최종 완성본) ---
-
 import pygame
 pygame.init()
 
@@ -30,7 +28,7 @@ captured_pieces_white, captured_pieces_black = [], []
 turn_step, selection = 0, 100
 valid_moves = []
 
-# 이미지 로딩 (기존과 동일)
+# 이미지 로딩
 black_queen = pygame.image.load('assets/1024px/b_queen_png_shadow_1024px.png'); black_queen = pygame.transform.scale(black_queen, (80, 80)); black_queen_small = pygame.transform.scale(black_queen, (45, 45))
 black_king = pygame.image.load('assets/1024px/b_king_png_shadow_1024px.png'); black_king = pygame.transform.scale(black_king, (80, 80)); black_king_small = pygame.transform.scale(black_king, (45, 45))
 black_rook = pygame.image.load('assets/1024px/b_rook_png_shadow_1024px.png'); black_rook = pygame.transform.scale(black_rook, (80, 80)); black_rook_small = pygame.transform.scale(black_rook, (45, 45))
@@ -59,9 +57,9 @@ white_promote, black_promote, promo_index = False, False, 100
 check = False
 castling_moves = []
 
-# 퀴즈 관련 변수
+# 퀴즈 분야 변수
 QUIZ_CATEGORIES = ['상식', '시사', '경제', '스포츠', '속담', '사자성어', '역사', '과학', '문화/예술']
-# #### 킹 스킬 기능 추가 ####
+# 킹 스킬 추가
 quiz_state = 'INACTIVE' # INACTIVE, VERSUS, KING_SKILL_SELECTION, CATEGORY_SELECTION, ANSWERING, RESULT
 
 # 퀴즈 한 판에 대한 정보를 담는 변수
