@@ -1,6 +1,3 @@
-# two player chess in python with Pygame!
-# part one, set up variables images and game loop
-
 import pygame
 
 pygame.init()
@@ -84,7 +81,7 @@ winner = ''
 game_over = False
 
 
-# draw main game board
+# 게임 보드 그리기기
 def draw_board():
     for i in range(32):
         column = i % 4
@@ -107,7 +104,7 @@ def draw_board():
         screen.blit(medium_font.render('FORFEIT', True, 'black'), (810, 830))
 
 
-# draw pieces onto board
+# 보드에 기물 그리기기
 def draw_pieces():
     for i in range(len(white_pieces)):
         index = piece_list.index(white_pieces[i])
@@ -132,7 +129,7 @@ def draw_pieces():
                                                   100, 100], 2)
 
 
-# function to check all pieces valid options on board
+# 보드에 기물들 유효한지 확인인
 def check_options(pieces, locations, turn):
     moves_list = []
     all_moves_list = []
@@ -155,7 +152,7 @@ def check_options(pieces, locations, turn):
     return all_moves_list
 
 
-# check king valid moves
+# 킹 움직임 확인인
 def check_king(position, color):
     moves_list = []
     if color == 'white':
@@ -173,7 +170,7 @@ def check_king(position, color):
     return moves_list
 
 
-# check queen valid moves
+# 퀸 움직임 확인 룩 + 비숍
 def check_queen(position, color):
     moves_list = check_bishop(position, color)
     second_list = check_rook(position, color)
@@ -182,7 +179,7 @@ def check_queen(position, color):
     return moves_list
 
 
-# check bishop moves
+# 비숍 움직임 확인인
 def check_bishop(position, color):
     moves_list = []
     if color == 'white':
@@ -218,7 +215,7 @@ def check_bishop(position, color):
     return moves_list
 
 
-# check rook moves
+# 룩 움직임 확인인
 def check_rook(position, color):
     moves_list = []
     if color == 'white':
@@ -254,7 +251,7 @@ def check_rook(position, color):
     return moves_list
 
 
-# check valid pawn moves
+# 폰 움직임 확인인
 def check_pawn(position, color):
     moves_list = []
     if color == 'white':
@@ -282,7 +279,7 @@ def check_pawn(position, color):
     return moves_list
 
 
-# check valid knight moves
+# 나이트 움직임 확인
 def check_knight(position, color):
     moves_list = []
     if color == 'white':
@@ -300,7 +297,7 @@ def check_knight(position, color):
     return moves_list
 
 
-# check for valid moves for just selected piece
+# 선택된 기물 유효한 움직임 확인
 def check_valid_moves():
     if turn_step < 2:
         options_list = white_options
@@ -310,7 +307,7 @@ def check_valid_moves():
     return valid_options
 
 
-# draw valid moves on screen
+# 유효한 움직임 그리기
 def draw_valid(moves):
     if turn_step < 2:
         color = 'red'
@@ -320,7 +317,7 @@ def draw_valid(moves):
         pygame.draw.circle(screen, color, (moves[i][0] * 100 + 50, moves[i][1] * 100 + 50), 5)
 
 
-# draw captured pieces on side of screen
+# 죽은 기물 사이드에 표시시
 def draw_captured():
     for i in range(len(captured_pieces_white)):
         captured_piece = captured_pieces_white[i]
@@ -332,7 +329,7 @@ def draw_captured():
         screen.blit(small_white_images[index], (925, 5 + 50 * i))
 
 
-# draw a flashing square around king if in check
+# 킹 체크 당했을때 알리기기
 def draw_check():
     if turn_step < 2:
         if 'king' in white_pieces:
@@ -360,7 +357,7 @@ def draw_game_over():
     screen.blit(font.render(f'Press ENTER to Restart!', True, 'white'), (210, 240))
 
 
-# main game loop
+# 메인 게임 루프프
 black_options = check_options(black_pieces, black_locations, 'black')
 white_options = check_options(white_pieces, white_locations, 'white')
 run = True
